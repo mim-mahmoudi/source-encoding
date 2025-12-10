@@ -2,78 +2,99 @@
 
 namespace senc {
 
-//SYMBOL_LIST
-symbol_list::symbol_list(std::initializer_list<std::pair<std::string, double>> list)
-    :symbols{list} {
-    std::sort(symbols.begin(), symbols.end(), compare());
+//message_ensemble
+message_ensemble::message_ensemble(std::initializer_list<std::pair<std::string, double>> list)
+    :messages{list} {
+    std::sort(messages.begin(), messages.end(), compare());
 }
 
-void symbol_list::insert(std::string symbol, double weight) {
+void message_ensemble::insert(std::string message, double weight) {
     if (weight <= 0.0)
         std::abort();
-    if (symbol.empty())
+    if (message.empty())
         std::abort();
 
-    auto it = std::find_if(symbols.begin(), symbols.end(), equal_to(symbol));
+    auto it = std::find_if(messages.begin(), messages.end(), equal_to(message));
 
-    if (it == symbols.end()) {
-        symbols.push_back({symbol, weight});
-        std::sort(symbols.begin(), symbols.end(), compare());
+    if (it == messages.end()) {
+        messages.push_back({message, weight});
+        std::sort(messages.begin(), messages.end(), compare());
     }
     else {
         it->second = weight;
     }
 }
 
-void symbol_list::erase(std::string symbol) {
-    auto it = std::find_if(symbols.begin(), symbols.end(), equal_to(symbol));
-    symbols.erase(it);
-    std::sort(symbols.begin(), symbols.end(), compare());
+void message_ensemble::erase(std::string message) {
+    auto it = std::find_if(messages.begin(), messages.end(), equal_to(message));
+    messages.erase(it);
+    std::sort(messages.begin(), messages.end(), compare());
 }
 
-void symbol_list::print() {
-    std::for_each(symbols.begin(), symbols.end(),
-        [](std::pair<std::string, double>& sym)
-        { std::cout << sym.first << "\t" << sym.second << std::endl;});
+void message_ensemble::print() {
+    std::for_each(messages.begin(), messages.end(),
+        [](std::pair<std::string, double>& msg)
+        { std::cout << msg.first << "\t" << msg.second << std::endl;});
 }
 
-bool symbol_list::contains(std::string symbol) {
-    return symbols.end() != std::find_if(symbols.begin(), symbols.end(), equal_to(symbol));
+bool message_ensemble::contains(std::string message) {
+    return messages.end() != std::find_if(messages.begin(), messages.end(), equal_to(message));
 }
 
-size_t symbol_list::size() {
-    return symbols.size();
+size_t message_ensemble::size() {
+    return messages.size();
 }
 
-double symbol_list::weight(std::string symbol) {
-    auto it = std::find_if(symbols.begin(), symbols.end(), equal_to(symbol));
-    if (it == symbols.end())
+double message_ensemble::weight(std::string message) {
+    auto it = std::find_if(messages.begin(), messages.end(), equal_to(message));
+    if (it == messages.end())
         return 0.0;
     else
         return it->second;
 }
 
-double symbol_list::weight(size_t index) {
-    if ((index < 0) || (index >= symbols.size()))
+double message_ensemble::weight(size_t index) {
+    if ((index < 0) || (index >= messages.size()))
         return 0.0;
-    return symbols[index].second;
+    return messages[index].second;
 }
 
-std::pair<std::string, double> symbol_list::operator[] (size_t index) {
-    if ((index < 0) || (index >= symbols.size()))
+std::pair<std::string, double> message_ensemble::operator[] (size_t index) {
+    if ((index < 0) || (index >= messages.size()))
         return {};
-    return symbols[index];
+    return messages[index];
+}
+
+//SOURCE ENCODER
+source_encoder::source_encoder(message_ensemble& _messages, size_t _n_syms)
+    :messages{_messages} {
+    set_num_symbols(_n_syms);
+}
+
+std::vector<std::string> source_encoder::generate_code() {
+    n_messages = messages.size();
+    if (n_messages == 0)
+        return {};
+    else if (n_messages == 1)
+        return {{"0"}};
+
+    std::vector<std::string> codes(n_messages, "");
+    encoder(codes);
+    return codes;
+}
+
+void source_encoder::set_num_symbols(size_t _n_syms) {
+    if (_n_syms < 2)
+        std::abort();
+    n_symbols = _n_syms;
 }
 
 //FANO ENCODER
-std::vector<std::string> Fano_encoder::generate_code() {
-    n_symbols = symbols.size();
-    if (n_symbols == 0)
-        return {};
+Fano_encoder::Fano_encoder(message_ensemble& _messages, size_t _n_syms)
+    :source_encoder(_messages, _n_syms) {}
 
-    std::vector<std::string> codes(n_symbols, "");
-    generate_fano_code(codes, 0, n_symbols - 1, 0);
-    return codes;
+void Fano_encoder::encoder(std::vector<std::string>& _codes) {
+    generate_fano_code(_codes, 0, n_messages - 1, 0);
 }
 
 void Fano_encoder::generate_fano_code(
@@ -146,31 +167,95 @@ double Fano_encoder::sum_weights(size_t start, size_t end) {
     double sum = 0.0;
     size_t i;
     for (i = start; i <= end; i++)
-        sum += symbols.weight(i);
+        sum += messages.weight(i);
     return sum;
 }
 
 //HAFFMAN ENCODER
-std::vector<std::string> Haffman_encoder::generate_code() {
-    n_symbols = symbols.size();
-    if (n_symbols == 0)
-        return {};
+Haffman_encoder::Haffman_encoder(message_ensemble& _messages, size_t _n_syms)
+    :source_encoder(_messages, _n_syms) {
+}
 
-    std::vector<std::string> codes(n_symbols, "");
+void Haffman_encoder::encoder(std::vector<std::string>& _codes) {
+    generate_haffman_code(_codes);
+}
 
+void Haffman_encoder::generate_haffman_code(
+        std::vector<std::string>& _codes) {
+    size_t n0 = n_messages % (n_symbols - 1);
+    size_t n_stages = (n_messages - n0) / (n_symbols - 1);
+    std::vector<size_t> places(n_stages);
 
+    size_t i, j = 0.0;
 
+    double sum;
 
+    for (i = 0; i < n_stages; i++) {
+        size_t end;
+        sum = 0.0;
+
+        switch(i){
+        case 0:
+            end = n_messages;
+        default:
+            end = (n_stages - i) * n_symbols;
+        };
+
+        for (j = (n_stages - i) * (n_symbols - 1); j < end; j++) {
+            sum += messages.weight(j);
+        }
+
+        for (j = 0; j < end; j++) {
+            /*if (sum > messages.weight(j);) {
+                //places[i] = j;
+            }*/
+        }
+    }
+
+    fill(_codes, places);
+
+    // _codes.reverse();
+    for (i = 0; i < n_messages; i++)
+    {
+        std::reverse(_codes[i].begin(), _codes[i].end());
+    }
+}
+
+void Haffman_encoder::fill(std::vector<std::string>& _codes,
+        std::vector<size_t>& _places, size_t stage) {
 
 }
+
 
 //SHANNON ENCODER
-std::vector<std::string> Shannon_encoder::generate_code() {
+Shannon_encoder::Shannon_encoder(message_ensemble& _messages, size_t _n_syms)
+    :source_encoder(_messages, _n_syms) {
+}
+
+void Shannon_encoder::encoder(std::vector<std::string>& _codes) {
+    generate_shannon_code(_codes);
+}
+
+void Shannon_encoder::generate_shannon_code(
+    std::vector<std::string>& _codes) {
 
 }
 
-std::string Shannon_encoder::fractional_to_binary(double f, size_t len) {
+std::vector<int> Shannon_encoder::base_n(double f, int base, size_t len) {
+    if (len <= 0)
+        return {};
+    std::vector<int> p_base(len);
 
+    int i;
+    for (i = 0; i < len; i++) {
+        /*
+         *
+         *
+         */
+    }
+
+
+    return p_base;
 }
 
 

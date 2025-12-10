@@ -9,36 +9,37 @@
 
 namespace senc {
 
-//SYMBOL_LIST
-class symbol_list
+//MESSAGE_ENSEMBLE
+class message_ensemble
 {
 public:
-    symbol_list() {}
-    symbol_list(std::initializer_list<std::pair<std::string, double>>);
+    message_ensemble() {}
+    message_ensemble(std::initializer_list<std::pair<std::string, double>> list);
+    message_ensemble(std::vector<std::pair<std::string, double>> list);
 
-    void insert(std::string symbol, double weight);
-    void erase(std::string symbol);
+    void insert(std::vector<std::pair<std::string, double>> list);
+    void insert(std::string message, double weight);
+    void erase(std::string message);
     void print();
-    bool contains(std::string symbol);
+    bool contains(std::string message);
 
     size_t size();
-    double weight(std::string symbol);
+    double weight(std::string message);
     double weight(size_t index);
+    double entropy() { return 2; }
 
     std::pair<std::string, double> operator[] (size_t index);
 
-
-
 private:
-    std::vector<std::pair<std::string, double>> symbols;
+    std::vector<std::pair<std::string, double>> messages;
 
     class equal_to {
-        std::string& symbol;
+        std::string& message;
     public:
         equal_to(std::string& s)
-            :symbol(s) {}
+            :message(s) {}
         bool operator()(std::pair<std::string, double>& p)
-        { return p.first == symbol; }
+        { return p.first == message; }
     };
 
     class compare {
@@ -46,20 +47,56 @@ private:
         bool operator()(std::pair<std::string, double>& p1, std::pair<std::string, double>& p2)
         { return p1.second > p2.second; }
     };
+};
 
 
+//ALPHABET
+class alphabet
+{
+
+};
+
+// CODE
+class code
+{
+public:
+    code(size_t _n_syms);
+    virtual void push_back(int symbol) = 0;
+
+private:
+    //std::string c;
+    size_t n_symbols;
+
+};
+
+class string_code: public code
+{
+
+};
+
+// CODE ENSEMBLE
+class code_ensemble
+{
+public:
+    code_ensemble(size_t _n_msgs, size_t _n_syms = 2);
+    void insert();
+    void reverse();
+
+private:
+    std::vector<std::string> codes;
 };
 
 //SOURCE ENCODER
 class source_encoder
 {
 public:
-    source_encoder(symbol_list& _symbols)
-        :symbols{_symbols} {}
-
-    virtual std::vector<std::string> generate_code() = 0;
+    source_encoder(message_ensemble& _messages, size_t _n_syms = 2);
+    std::vector<std::string> generate_code();
+    void set_num_symbols(size_t d);
 protected:
-    symbol_list& symbols;
+    virtual void encoder(std::vector<std::string>& _codes) = 0;
+    message_ensemble& messages;
+    size_t n_messages;
     size_t n_symbols;
 };
 
@@ -67,12 +104,10 @@ protected:
 class Fano_encoder : public source_encoder
 {
 public:
-    Fano_encoder(symbol_list& _symbols)
-        :source_encoder(_symbols){}
-
-    std::vector<std::string> generate_code();
+    Fano_encoder(message_ensemble& _messages, size_t _n_syms = 2);
 
 private:
+    void encoder(std::vector<std::string>& _codes);
     void generate_fano_code(
         std::vector<std::string>& _codes,
         size_t start, size_t end, int turn = 0);
@@ -85,10 +120,14 @@ private:
 class Haffman_encoder : public source_encoder
 {
 public:
-    Haffman_encoder(symbol_list& _symbols)
-        :source_encoder(_symbols) {}
+    Haffman_encoder(message_ensemble& _messages, size_t _n_syms = 2);
+private:
+    void encoder(std::vector<std::string>& _codes);
+    void generate_haffman_code(
+        std::vector<std::string>& _codes);
+    void fill(std::vector<std::string>& _codes,
+        std::vector<size_t>& _places, size_t stage = 0);
 
-    std::vector<std::string> generate_code();
 
 };
 
@@ -96,17 +135,13 @@ public:
 class Shannon_encoder : public source_encoder
 {
 public:
-    Shannon_encoder(symbol_list& _symbols)
-        :source_encoder(_symbols) {}
-
-    std::vector<std::string> generate_code();
+    Shannon_encoder(message_ensemble& _messages, size_t _n_syms = 2);
 
 private:
-    std::string fractional_to_binary(double f, size_t len);
-    double weight_sum;
+    void encoder(std::vector<std::string>& _codes);
+    void generate_shannon_code(std::vector<std::string>& _codes);
+    std::vector<int> base_n(double f, int base,  size_t len);
 };
-
-
 }
 
 #endif // SOURCE_ENCODER_H
