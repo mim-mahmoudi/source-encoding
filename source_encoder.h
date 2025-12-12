@@ -6,6 +6,7 @@
 #include <map>
 #include <algorithm>
 #include <iostream>
+#include <cmath>
 
 namespace senc {
 
@@ -26,6 +27,9 @@ public:
     size_t size();
     double weight(std::string message);
     double weight(size_t index);
+    double frequecny(std::string message);
+    double frequecny(size_t index);
+
     double entropy() { return 2; }
 
     std::pair<std::string, double> operator[] (size_t index);
@@ -47,6 +51,14 @@ private:
         bool operator()(std::pair<std::string, double>& p1, std::pair<std::string, double>& p2)
         { return p1.second > p2.second; }
     };
+
+    double sum_of_weights() {
+        double sum = 0.0;
+        for (auto p : messages) {
+            sum += p.second;
+        }
+        return sum;
+    }
 };
 
 
@@ -140,7 +152,7 @@ public:
 private:
     void encoder(std::vector<std::string>& _codes);
     void generate_shannon_code(std::vector<std::string>& _codes);
-    std::vector<int> base_n(double f, int base,  size_t len);
+    std::pair<std::string,std::string> base_n(double f, int base,  size_t precision);
 };
 }
 

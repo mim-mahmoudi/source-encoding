@@ -59,6 +59,20 @@ double message_ensemble::weight(size_t index) {
     return messages[index].second;
 }
 
+double message_ensemble::frequecny(std::string message) {
+    auto it = std::find_if(messages.begin(), messages.end(), equal_to(message));
+    if (it == messages.end())
+        return 0.0;
+    else
+        return (it->second) / sum_of_weights();
+}
+
+double message_ensemble::frequecny(size_t index) {
+    if ((index < 0) || (index >= messages.size()))
+        return 0.0;
+    return messages[index].second / sum_of_weights();
+}
+
 std::pair<std::string, double> message_ensemble::operator[] (size_t index) {
     if ((index < 0) || (index >= messages.size()))
         return {};
@@ -194,7 +208,7 @@ void Haffman_encoder::generate_haffman_code(
         size_t end;
         sum = 0.0;
 
-        switch(i){
+        switch(i) {
         case 0:
             end = n_messages;
         default:
@@ -224,8 +238,8 @@ void Haffman_encoder::generate_haffman_code(
 void Haffman_encoder::fill(std::vector<std::string>& _codes,
         std::vector<size_t>& _places, size_t stage) {
 
-}
 
+}
 
 //SHANNON ENCODER
 Shannon_encoder::Shannon_encoder(message_ensemble& _messages, size_t _n_syms)
@@ -238,31 +252,57 @@ void Shannon_encoder::encoder(std::vector<std::string>& _codes) {
 
 void Shannon_encoder::generate_shannon_code(
     std::vector<std::string>& _codes) {
+    size_t precision;
+    double commulative_p = 0.0;
 
+    _codes[0] = base_n(0.0, n_symbols, std::ceil(-std::log2(messages.frequecny(0)))).second;
+    int i;
+    for (i = 1; i < n_messages; i++) {
+        precision = (size_t) std::ceil(-std::log2(messages.frequecny(i)));
+        commulative_p += messages.frequecny(i - 1);
+        _codes[i] = base_n(commulative_p, n_symbols, precision).second;
+    }
 }
 
-std::vector<int> Shannon_encoder::base_n(double f, int base, size_t len) {
-    if (len <= 0)
-        return {};
-    std::vector<int> p_base(len);
+std::pair<std::string,std::string> Shannon_encoder::base_n(double f, int base, size_t precision) {
+    if ((precision < 0) || (base < 2))
+        std::abort();
 
-    int i;
-    for (i = 0; i < len; i++) {
-        /*
-         *
-         *
-         */
+    double g = std::abs(f);
+    int integer_part = (int)g ;
+    double fractional_part = g - (double)integer_part;
+
+    std::pair<std::string,std::string> base_n{"", ""};
+    int nit = 0;
+
+    //integer part
+    while (integer_part != 0) {
+        nit  = integer_part % base;
+        base_n.first.append(std::to_string(nit));
+
+        integer_part -= nit;
+        integer_part /= base;
+    }
+    std::reverse(base_n.first.begin(), base_n.first.end());
+
+    //fractional part
+    int i, j;
+    double tmp;
+    for (i = 0; i < precision; i++) {
+        for (j = 1; j <= base; j++) {
+            tmp = fractional_part + (double) j / base;
+            if (tmp >= 1) {
+                base_n.second.append(std::to_string(base - j));
+                fractional_part = tmp - 1.0;
+                fractional_part *= base;
+                break;
+            }
+        }
     }
 
-
-    return p_base;
+    return base_n;
 }
-
-
-
-
-
-}
+} //namespace senc
 
 
 

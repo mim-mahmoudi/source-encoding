@@ -35,16 +35,26 @@ int main()
     std::uniform_int_distribution<> distrib(1, 1000);
 
     double w;
-    for (int i = 0; i < 50; i++) {
+    for (int i = 0; i < 100; i++) {
         w = (double)(distrib(gen) % 20) + 0.01 * (double)distrib(gen);
         messages.insert(std::to_string(i), w);
     }
+
+    std::cout << "messages" << endl;
     messages.print();
 
+    double sum = 0.0;
+    std::cout << "frequecny" << endl;
+    for (int i = 0; i < messages.size(); i++) {
+        std::cout << messages.frequecny(i) << endl;
+        sum += messages.frequecny(i);
+    }
+    std::cout << "sum: " << sum << endl;
 
-    senc::source_encoder* encoder = new senc::Fano_encoder(messages);
+    senc::source_encoder* encoder = new senc::Fano_encoder(messages, 2);
     std::vector<std::string> codes = encoder->generate_code();
 
+    std::cout << "codes" << endl;
     for (int i = 0; i < codes.size(); i++)
         cout << codes[i] << endl;
 
