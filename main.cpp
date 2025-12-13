@@ -18,16 +18,17 @@ int main()
     messages.insert("g", 0.05);
     messages.insert("h", 0.02);
 
-    std::cout << "messages: " << endl;
+    std::cout << "messages: " << std::endl;
     messages.print();
-    std::cout << "******************" << endl;
+    std::cout << "******************" << std::endl;
 
-    senc::source_encoder* encoder = new senc::Haffman_encoder(messages, 4);
+    int number_of_symbbols = 4;
+    senc::source_encoder* encoder = new senc::Haffman_encoder(messages, number_of_symbbols);
     std::vector<std::string> codes = encoder->generate_code();
 
-    std::cout << "codes: " << endl;
-    for (int i = 0; i < codes.size(); i++)
-        cout << codes[i] << endl;
+    std::cout << "codes: " << std::endl;
+    for (auto& c : codes)
+        std::cout << c << std::endl;
 
     delete encoder;
     return 0;
