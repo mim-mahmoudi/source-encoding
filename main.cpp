@@ -6,8 +6,6 @@
 
 #include "source_encoder.h"
 
-using namespace std;
-
 int main()
 {
     senc::message_ensemble messages;
