@@ -116,7 +116,7 @@ void Fano_encoder::generate_fano_code(
     size_t start, size_t end, int turn) {
 
     if (end < start)
-        return;
+        std::abort();
     size_t len = end - start + 1;
     size_t mid = find_mid(start, end);
     size_t i = 0;
@@ -196,47 +196,67 @@ void Haffman_encoder::encoder(std::vector<std::string>& _codes) {
 
 void Haffman_encoder::generate_haffman_code(
         std::vector<std::string>& _codes) {
-    size_t n0 = n_messages % (n_symbols - 1);
-    size_t n_stages = (n_messages - n0) / (n_symbols - 1);
-    std::vector<size_t> places(n_stages);
 
-    size_t i, j = 0.0;
+    std::list<std::pair<double, std::vector<size_t>>> auxiliary_list;
 
-    double sum;
+    int i;
+    for (i = 0; i < messages.size(); i++) {
+        auxiliary_list.push_back(std::pair<double, std::vector<size_t>> (messages.weight(i), {i}));
+    }
 
-    for (i = 0; i < n_stages; i++) {
-        size_t end;
-        sum = 0.0;
+    while (true) {
+        int j;
+        size_t xlen;
+        xlen = auxiliary_list.size();
+        std::list<std::pair<double, std::vector<size_t>>>::iterator it;
+        it = std::prev(auxiliary_list.end());
 
-        switch(i) {
-        case 0:
-            end = n_messages;
-        default:
-            end = (n_stages - i) * n_symbols;
-        };
-
-        for (j = (n_stages - i) * (n_symbols - 1); j < end; j++) {
-            sum += messages.weight(j);
+        // append symbols to code
+        j = 0;
+        while (xlen - j > n_symbols) {
+            j += (n_symbols - 1);
+        }
+        for (i = xlen - 1; i >= j; i--) {
+            for (auto& index : it->second) {
+                _codes[index].append(std::to_string(i - j));
+            }
+            std::advance(it, -1);
         }
 
-        for (j = 0; j < end; j++) {
-            /*if (sum > messages.weight(j);) {
-                //places[i] = j;
-            }*/
+        if (xlen <= n_symbols) {
+            break;
+        }
+
+        //re-sort
+        double sum_p;
+        std::vector<size_t> tmp;
+        sum_p = 0.0;
+        tmp.clear();
+
+        it = std::prev(auxiliary_list.end());
+        for (i = xlen - 1; i >= j; i--) {
+            sum_p += it->first;
+            for (auto& indexes : it->second)
+                tmp.push_back(indexes);
+            auxiliary_list.pop_back();
+            it = std::prev(auxiliary_list.end());
+        }
+
+        for (it = auxiliary_list.begin(); it != auxiliary_list.end(); std::advance(it, +1)) {
+            if (sum_p > (it->first)) {
+                auxiliary_list.insert(it, {sum_p, tmp});
+                break;
+            }
+        }
+        if (it == auxiliary_list.end()) {
+            auxiliary_list.push_back({sum_p, tmp});
         }
     }
 
-    fill(_codes, places);
-
-    // _codes.reverse();
     for (i = 0; i < n_messages; i++)
     {
         std::reverse(_codes[i].begin(), _codes[i].end());
     }
-}
-
-void Haffman_encoder::fill(std::vector<std::string>& _codes,
-        std::vector<size_t>& _places, size_t stage) {
 
 
 }
@@ -293,8 +313,9 @@ std::pair<std::string,std::string> Shannon_encoder::base_n(double f, int base, s
             tmp = fractional_part + (double) j / base;
             if (tmp >= 1) {
                 base_n.second.append(std::to_string(base - j));
-                fractional_part = tmp - 1.0;
                 fractional_part *= base;
+                fractional_part -= (int) fractional_part;
+
                 break;
             }
         }

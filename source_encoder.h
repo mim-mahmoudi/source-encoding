@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <list>
 #include <map>
 #include <algorithm>
 #include <iostream>
@@ -54,48 +55,11 @@ private:
 
     double sum_of_weights() {
         double sum = 0.0;
-        for (auto p : messages) {
+        for (auto& p : messages) {
             sum += p.second;
         }
         return sum;
     }
-};
-
-
-//ALPHABET
-class alphabet
-{
-
-};
-
-// CODE
-class code
-{
-public:
-    code(size_t _n_syms);
-    virtual void push_back(int symbol) = 0;
-
-private:
-    //std::string c;
-    size_t n_symbols;
-
-};
-
-class string_code: public code
-{
-
-};
-
-// CODE ENSEMBLE
-class code_ensemble
-{
-public:
-    code_ensemble(size_t _n_msgs, size_t _n_syms = 2);
-    void insert();
-    void reverse();
-
-private:
-    std::vector<std::string> codes;
 };
 
 //SOURCE ENCODER
@@ -105,6 +69,8 @@ public:
     source_encoder(message_ensemble& _messages, size_t _n_syms = 2);
     std::vector<std::string> generate_code();
     void set_num_symbols(size_t d);
+
+    virtual ~source_encoder() {}
 protected:
     virtual void encoder(std::vector<std::string>& _codes) = 0;
     message_ensemble& messages;
@@ -137,10 +103,6 @@ private:
     void encoder(std::vector<std::string>& _codes);
     void generate_haffman_code(
         std::vector<std::string>& _codes);
-    void fill(std::vector<std::string>& _codes,
-        std::vector<size_t>& _places, size_t stage = 0);
-
-
 };
 
 //SHANNON ENCODER
