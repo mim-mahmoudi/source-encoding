@@ -27,7 +27,7 @@ void message_ensemble::insert(std::string message, double weight) {
 
 void message_ensemble::erase(std::string message) {
     auto it = std::find_if(messages.begin(), messages.end(), equal_to(message));
-    if (it == messages.end()) {
+    if (it != messages.end()) {
         messages.erase(it);
     }
 }
